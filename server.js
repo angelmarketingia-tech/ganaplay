@@ -18,8 +18,14 @@ const PORT = process.env.PORT || 3000;
 // Configuración de Middlewares
 app.use(cors());
 app.use(express.json());
-// Servir la carpeta public (dashboard frontend HTML)
+/// Servir la carpeta public (dashboard frontend HTML)
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Ruta explicita para la raiz para evitar el error "Cannot GET /"
+app.get('/', (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 
 // Constantes de negocio
 const GLOBAL_BUDGET = 50000; // Presupuesto de $50k hasta Junio 2026
