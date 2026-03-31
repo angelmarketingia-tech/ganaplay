@@ -1,2 +1,1519 @@
- <!-- index.html --> 
-   
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GanaPlay Smart Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    :root {
+      --primary: #00d4aa;
+      --primary-dark: #00b38f;
+      --sidebar: #0f172a;
+      --sidebar-hover: #1e293b;
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --sv-color: #3b82f6;   /* Azul para El Salvador */
+      --gt-color: #8b5cf6;   /* Morado para Guatemala */
+      --border-radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); min-height: 100vh; display: flex; }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      position: fixed; inset: 0;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+      display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity .5s;
+    }
+    .login-box {
+      background: var(--card-bg); padding: 44px 40px; border-radius: 20px; text-align: center;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.3); width: 100%; max-width: 420px;
+    }
+    .login-logo { width: 100px; height: 60px; object-fit: contain; margin: 0 auto 16px; display: block; }
+    .login-box h2 { color: var(--sidebar); font-weight: 800; font-size: 22px; margin-bottom: 6px; }
+    .login-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 28px; }
+    .login-box input {
+      width: 100%; padding: 13px 16px; margin-bottom: 14px;
+      border: 1.5px solid var(--border); border-radius: 10px; font-size: 15px;
+      font-family: 'Inter'; outline: none; transition: border .25s;
+    }
+    .login-box input:focus { border-color: var(--primary); }
+    .btn-login {
+      width: 100%; padding: 14px; background: var(--primary); color: white; border: none;
+      border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: .25s;
+    }
+    .btn-login:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    #login-error { color: var(--danger); font-size: 13px; margin-top: 12px; display: none; }
+
+    /* ── LAYOUT ── */
+    #app-container { display: none; width: 100%; min-height: 100vh; }
+
+    .sidebar {
+      width: 76px; background: var(--sidebar);
+      display: flex; flex-direction: column; align-items: center; padding: 20px 0;
+      position: fixed; height: 100vh; z-index: 10;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+    }
+    .sidebar-logo { width: 52px; height: 52px; object-fit: contain; background: white; border-radius: 12px; padding: 5px; margin-bottom: 28px; }
+    .nav-items { display: flex; flex-direction: column; gap: 4px; width: 100%; flex: 1; }
+    .nav-btn {
+      width: 100%; padding: 15px 0; cursor: pointer; text-align: center;
+      color: rgba(255,255,255,0.5); transition: .25s; border-left: 3px solid transparent;
+    }
+    .nav-btn:hover, .nav-btn.active { color: white; background: rgba(255,255,255,0.07); border-left-color: var(--primary); }
+    .nav-btn i { font-size: 22px; }
+    .logout-btn { padding: 15px 0; cursor: pointer; text-align: center; color: rgba(255,255,255,0.4); transition: .25s; width: 100%; }
+    .logout-btn:hover { color: var(--danger); }
+
+    .main-content { margin-left: 76px; padding: 28px 36px; flex: 1; overflow-y: auto; min-height: 100vh; }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px; flex-wrap: wrap; gap: 16px;
+    }
+    .topbar-left h2 { font-size: 22px; font-weight: 800; }
+    .topbar-left p { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+
+    /* ── COUNTRY SWITCHER ── */
+    .country-switcher {
+      display: flex; align-items: center; background: var(--card-bg);
+      border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .country-btn {
+      padding: 10px 20px; cursor: pointer; font-weight: 600; font-size: 14px;
+      color: var(--text-muted); transition: .2s; display: flex; align-items: center; gap: 8px;
+      border: none; background: none; font-family: 'Inter';
+    }
+    .country-btn.active-sv { background: var(--sv-color); color: white; }
+    .country-btn.active-gt { background: var(--gt-color); color: white; }
+    .country-btn img { width: 20px; height: 14px; object-fit: cover; border-radius: 2px; }
+
+    /* ── FILTROS ── */
+    .filter-card {
+      background: var(--card-bg); border-radius: var(--border-radius);
+      padding: 20px 24px; margin-bottom: 24px;
+      border: 1.5px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;
+    }
+    .filter-group { flex: 1; min-width: 140px; }
+    .filter-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; display: block; }
+    .filter-input { width: 100%; padding: 9px 13px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: 'Inter'; outline: none; transition: border .2s; }
+    .filter-input:focus { border-color: var(--primary); }
+    .btn-action { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: 'Inter'; font-size: 14px; transition: .2s; border: 1.5px solid; }
+    .btn-light { background: var(--bg); border-color: var(--border); color: var(--text-main); }
+    .btn-light:hover { background: var(--border); }
+    .btn-primary-fill { background: var(--primary); border-color: var(--primary); color: white; }
+    .btn-primary-fill:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+    .btn-dark-fill { background: var(--sidebar); border-color: var(--sidebar); color: white; }
+    .btn-dark-fill:hover { background: #1e293b; }
+
+    /* ── UPLOAD ── */
+    #upload-area {
+      background: var(--card-bg); border: 2px dashed var(--primary);
+      border-radius: var(--border-radius); padding: 44px; text-align: center;
+      margin-bottom: 24px; transition: .25s; cursor: pointer;
+    }
+    #upload-area:hover { background: rgba(0,212,170,0.04); border-color: var(--primary-dark); }
+    #upload-area .upload-icon { font-size: 48px; color: var(--primary); margin-bottom: 12px; display: block; }
+    #upload-area h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+    #upload-area p { color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+    .btn-upload { background: var(--primary); color: white; padding: 11px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-block; margin-top: 16px; font-size: 14px; }
+
+    /* ── KPI GRID ── */
+    .section-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .country-pill { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .pill-sv { background: rgba(59,130,246,0.12); color: var(--sv-color); }
+    .pill-gt { background: rgba(139,92,246,0.12); color: var(--gt-color); }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .kpi-card {
+      background: var(--card-bg); padding: 22px; border-radius: var(--border-radius);
+      border: 1.5px solid var(--border); transition: .2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.07); }
+    .kpi-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 10px; }
+    .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .kv-green { color: var(--primary-dark); }
+    .kv-blue { color: var(--sv-color); }
+    .kv-purple { color: var(--gt-color); }
+    .kv-dark { color: var(--sidebar); }
+    .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 7px; }
+
+    /* ── TABLA ── */
+    .table-wrap { background: var(--card-bg); border-radius: var(--border-radius); border: 1.5px solid var(--border); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--bg); }
+    th { padding: 13px 18px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; text-align: left; letter-spacing: .5px; }
+    td { padding: 14px 18px; font-size: 14px; border-top: 1px solid var(--border); vertical-align: middle; }
+    tbody tr:hover { background: rgba(0,212,170,0.03); }
+    .country-tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .tag-sv { background: rgba(59,130,246,0.1); color: var(--sv-color); }
+    .tag-gt { background: rgba(139,92,246,0.1); color: var(--gt-color); }
+
+    /* ── MODAL BASE ── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.75); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+    .modal-card { background: var(--card-bg); width: 100%; max-width: 680px; border-radius: 18px; padding: 32px; box-shadow: 0 25px 60px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .modal-title { font-size: 18px; font-weight: 800; color: var(--sidebar); display: flex; align-items: center; gap: 10px; }
+    .modal-close { cursor: pointer; color: var(--text-muted); font-size: 26px; line-height: 1; transition: .2s; }
+    .modal-close:hover { color: var(--danger); }
+    .modal-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.6; }
+
+    /* ── OCR MODAL ── */
+    .ocr-country-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .ocr-tab { padding: 9px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; border: 2px solid var(--border); background: transparent; font-family: 'Inter'; transition: .2s; }
+    .ocr-tab.active-sv { background: var(--sv-color); color: white; border-color: var(--sv-color); }
+    .ocr-tab.active-gt { background: var(--gt-color); color: white; border-color: var(--gt-color); }
+    .ocr-tab:not(.active-sv):not(.active-gt) { color: var(--text-muted); }
+
+    #ocr-drop-zone {
+      border: 2px dashed var(--border); border-radius: 14px; padding: 44px 20px;
+      text-align: center; cursor: pointer; transition: .25s; background: var(--bg); margin-bottom: 18px;
+    }
+    #ocr-drop-zone:hover, #ocr-drop-zone.drag-over { border-color: var(--primary); background: rgba(0,212,170,0.05); }
+    #ocr-drop-zone i { font-size: 44px; color: var(--primary); display: block; margin-bottom: 12px; }
+    #ocr-drop-zone h4 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    #ocr-drop-zone p { font-size: 13px; color: var(--text-muted); }
+    kbd { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 12px; }
+
+    #ocr-preview-area { display: none; border-radius: 12px; overflow: hidden; background: var(--bg); padding: 16px; margin-bottom: 18px; }
+    #ocr-img { max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid var(--border); display: block; margin: 0 auto; }
+    .ocr-img-controls { display: flex; gap: 10px; margin-top: 14px; justify-content: center; flex-wrap: wrap; }
+
+    #ocr-status-bar { font-size: 14px; font-weight: 600; color: var(--primary-dark); text-align: center; min-height: 22px; margin-bottom: 16px; }
+
+    .ocr-results-section { display: none; }
+    .ocr-results-section h4 { font-size: 14px; font-weight: 700; color: var(--sidebar); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+
+    .inv-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; max-height: 260px; overflow-y: auto; }
+    .inv-item { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
+    .inv-item-date { font-weight: 600; font-size: 14px; }
+    .inv-item-input { width: 130px; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 7px; font-family: 'Inter'; text-align: right; font-weight: 600; font-size: 14px; transition: .2s; }
+    .inv-item-input:focus { border-color: var(--primary); outline: none; }
+    .inv-total-row { padding: 12px 14px; background: rgba(0,212,170,0.1); border-radius: 8px; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px; color: var(--primary-dark); }
+
+    .btn-save-inv { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'Inter'; transition: .2s; }
+    .btn-save-inv:hover { background: var(--primary-dark); }
+
+    /* ── STRATEGY SECTION (CHAT STYLE) ── */
+    .strategy-card { background: var(--card-bg); border: 2.2px solid #fbbf24; border-radius: var(--border-radius); display: flex; flex-direction: column; margin-bottom: 24px; overflow: hidden; box-shadow: 0 4px 20px rgba(251,191,36,0.1); }
+    .strategy-header { background: #fbbf24; padding: 12px 20px; display: flex; align-items: center; gap: 10px; color: #92400e; font-weight: 800; font-size: 14px; text-transform: uppercase; }
+    .strategy-body { padding: 20px; max-height: 350px; overflow-y: auto; background: #fffcf0; display: flex; flex-direction: column; gap: 14px; }
+    
+    /* Burbujas */
+    .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; position: relative; }
+    .chat-role { font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; display: block; opacity: 0.7; }
+    .chat-time { font-size: 10px; opacity: 0.5; margin-top: 6px; text-align: right; display: block; }
+    
+    .bubble-supervisor { align-self: flex-start; background: #fff; border: 1px solid #fde68a; color: #92400e; border-top-left-radius: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+    .bubble-admin { align-self: flex-end; background: var(--sidebar); color: #fff; border-top-right-radius: 2px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    
+    .strategy-footer { padding: 16px 20px; background: #f8fbff; border-top: 1px solid #e2e8f0; display: flex; gap: 12px; }
+    .strategy-footer textarea { flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px; font-family: 'Inter'; font-size: 13px; outline: none; resize: none; transition: .2s; }
+    .strategy-footer textarea:focus { border-color: #fbbf24; }
+    .btn-send-chat { background: #fbbf24; color: #92400e; border: none; padding: 0 20px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: .2s; display: flex; align-items: center; gap: 8px; }
+    .btn-send-chat:hover { background: #f59e0b; }
+
+    /* ── SUPERVISOR RESTRICTIONS ── */
+    body.is-supervisor .restrict-supervisor { display: none !important; }
+    body.is-supervisor .col-link, 
+    body.is-supervisor .col-clicks { display: none !important; }
+    
+    #supervisor-badge { display: none; background: #e2e8f0; color: #475569; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; margin-left: 10px; text-transform: uppercase; }
+    body.is-supervisor #supervisor-badge { display: inline-block; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <img class="login-logo" src="/logo.png" alt="GanaPlay" onerror="this.style.display='none'">
+    <h2>GanaPlay</h2>
+    <p>Smart Marketing Dashboard</p>
+    <input type="text" id="login-user" placeholder="Usuario" autocomplete="off" />
+    <input type="password" id="login-pass" placeholder="Contraseña" onkeydown="if(event.key==='Enter') handleLogin()" />
+    <button class="btn-login" onclick="handleLogin()">Ingresar</button>
+    <div id="login-error">Usuario o contraseña incorrectos.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-container">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <img class="sidebar-logo" src="/logo.png" alt="GanaPlay" onerror="this.style.display='none'">
+    <div class="nav-items">
+      <div class="nav-btn active" title="Dashboard"><i class="bi bi-grid-fill"></i></div>
+      <div class="nav-btn restrict-supervisor" title="Subir datos" onclick="document.getElementById('upload-area').scrollIntoView({behavior:'smooth'})"><i class="bi bi-cloud-upload"></i></div>
+      <div class="nav-btn restrict-supervisor" title="Añadir Inversión" onclick="openInvModal()"><i class="bi bi-currency-dollar"></i></div>
+    </div>
+    <div class="logout-btn" title="Cerrar sesión" onclick="handleLogout()"><i class="bi bi-box-arrow-right"></i></div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="main-content">
+    
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <h2 style="margin:0;">Smart Dashboard</h2>
+          <span id="supervisor-badge">Supervisor (Solo Lectura)</span>
+          <span id="dateswap-badge" style="display:none; background:#ffedd5; color:#9a3412; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; border:1px solid #fed7aa;">⚠️ Corrección de Fecha Activa</span>
+          <button class="restrict-supervisor" style="background:#ef4444; color:#fff; border:none; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;" onclick="resetSystemData()"><i class="bi bi-trash-fill"></i> Restablecer Todo</button>
+        </div>
+        <p id="topbar-sub">Carga tu archivo Excel para comenzar</p>
+      </div>
+      <!-- COUNTRY SWITCHER -->
+      <div class="country-switcher">
+        <button class="country-btn active-sv" id="btn-sv" onclick="switchCountry('SV')">
+          🇸🇻 El Salvador
+        </button>
+        <button class="country-btn" id="btn-gt" onclick="switchCountry('GT')">
+          🇬🇹 Guatemala
+        </button>
+        <button class="country-btn" id="btn-all" onclick="switchCountry('ALL')" style="border-left:1px solid var(--border);">
+          🌎 Ambos
+        </button>
+      </div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div id="upload-area" class="restrict-supervisor">
+      <label style="cursor:pointer; display:block;">
+        <i class="bi bi-file-earmark-excel upload-icon"></i>
+        <h3>Cargar Reporte de Meta Ads (.xlsx)</h3>
+        <p>Tu Excel debe tener la <strong>Fecha</strong> en la columna A y columnas agrupadas por país (El Salvador / Guatemala) con Registro, 1° Depósito e Inversión.</p>
+        <span class="btn-upload"><i class="bi bi-upload"></i> Seleccionar Archivo</span>
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none">
+      </label>
+    </div>
+
+    <!-- COOPERATIVE STRATEGY CHAT -->
+    <div id="strategy-section" class="strategy-card">
+      <div class="strategy-header">
+        <i class="bi bi-chat-right-quote-fill"></i> Muro de Estrategia
+        <div style="flex:1"></div>
+        <button id="btn-clear-chat" class="btn-action" style="font-size:11px; padding:6px 12px; border-radius:8px; background:#fee2e2; border:1px solid #ef4444; color:#991b1b; font-weight:700;" onclick="clearStrategyChat()"><i class="bi bi-trash3-fill"></i> Limpiar Muro</button>
+      </div>
+      
+      <div id="strategy-chat-log" class="strategy-body">
+        <!-- Bubbles will appear here -->
+      </div>
+
+      <div class="strategy-footer">
+        <textarea id="strategy-input" rows="1" placeholder="Tu mensaje aquí..."></textarea>
+        <button class="btn-send-chat" id="btn-send-msg" onclick="sendMessageFromRole()">
+          <span id="label-send-btn">Enviar</span> <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filter-card">
+      <div class="filter-group">
+        <span class="filter-label">Fecha Inicial</span>
+        <input type="date" id="filter-start" class="filter-input" onchange="renderDashboard()">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Fecha Final</span>
+        <input type="date" id="filter-end" class="filter-input" onchange="renderDashboard()">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Campaña / Link</span>
+        <select id="filter-link" class="filter-input" onchange="renderDashboard()">
+          <option value="">Todas las campañas</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;">
+        <button class="btn-action btn-light" onclick="clearFilters()"><i class="bi bi-x"></i> Limpiar</button>
+        <button class="btn-action btn-dark-fill restrict-supervisor" onclick="openInvModal()"><i class="bi bi-robot"></i> Cargar Inversión (IA)</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="section-label" id="kpi-section-label">
+      VISIÓN GENERAL
+      <span class="country-pill pill-sv" id="kpi-country-pill">El Salvador</span>
+    </div>
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Clicks</div>
+        <div class="kpi-value kv-dark" id="val-clicks">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Registros</div>
+        <div class="kpi-value kv-green" id="val-registros">—</div>
+        <div class="kpi-sub">Jugadores registrados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Primeros Depósitos</div>
+        <div class="kpi-value kv-green" id="val-depositos">—</div>
+        <div class="kpi-sub">FTDs</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Inversión Total</div>
+        <div class="kpi-value kv-blue" id="val-inversion">—</div>
+        <div class="kpi-sub" id="inv-status">Sin datos de inversión</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">CPL</div>
+        <div class="kpi-value kv-purple" id="val-cpl">—</div>
+        <div class="kpi-sub">Costo por Lead</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">CPA</div>
+        <div class="kpi-value kv-purple" id="val-cpa">—</div>
+        <div class="kpi-sub">Costo por Adquisición</div>
+      </div>
+    </div>
+
+    <!-- TABLA -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div class="section-label" style="margin:0;">DETALLE POR DÍA</div>
+      <button class="btn-action btn-light" id="btn-manual-swap" style="font-size:11px; padding:6px 12px; display:none;" onclick="toggleDateSwap()">
+        <i class="bi bi-arrow-left-right"></i> Intercambiar Día/Mes
+      </button>
+    </div>
+    <div class="table-wrap">
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>País</th>
+              <th class="col-link">Campaña</th>
+              <th class="col-clicks">Clicks</th>
+              <th>Registros</th>
+              <th>FTDs</th>
+              <th>Inversión</th>
+              <th>CPL</th>
+              <th>CPA</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:40px;">Sube tu archivo Excel para comenzar</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- MODAL OCR INVERSIÓN IA                    -->
+<!-- ══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-inv">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title"><i class="bi bi-robot"></i> Cargar Inversión con IA</div>
+      <div class="modal-close" onclick="closeInvModal()"><i class="bi bi-x"></i></div>
+    </div>
+    <p class="modal-sub">
+      Selecciona el país, luego <strong>pega (<kbd>Ctrl+V</kbd>)</strong> o <strong>sube una foto/captura</strong> de tu tabla de Inversión de Meta Ads.
+      La IA buscará la columna "Inversión" y extraerá los valores por día automáticamente.
+    </p>
+
+    <!-- Selector de modo -->
+    <div style="display:flex; gap:8px; margin-bottom:18px;">
+      <button id="tab-ia" onclick="switchInvTab('ia')" style="flex:1; padding:10px; border-radius:8px; border:2px solid var(--primary); background:var(--primary); color:#fff; font-weight:700; cursor:pointer; font-size:13px;">
+        <i class="bi bi-robot"></i> Cargar con IA (foto)
+      </button>
+      <button id="tab-texto" onclick="switchInvTab('texto')" style="flex:1; padding:10px; border-radius:8px; border:2px solid var(--border); background:#fff; color:var(--text-muted); font-weight:700; cursor:pointer; font-size:13px;">
+        <i class="bi bi-input-cursor-text"></i> Pegar como texto
+      </button>
+    </div>
+
+    <!-- País selector (compartido) -->
+    <div style="margin-bottom:18px;">
+      <div class="filter-label">¿Para qué país?</div>
+      <div class="ocr-country-tabs">
+        <button class="ocr-tab active-sv" id="ocr-tab-sv" onclick="setOcrCountry('SV')">🇸🇻 El Salvador</button>
+        <button class="ocr-tab" id="ocr-tab-gt" onclick="setOcrCountry('GT')">🇬🇹 Guatemala</button>
+        <button class="ocr-tab" id="ocr-tab-both" onclick="setOcrCountry('BOTH')" style="border-color:var(--primary);color:var(--primary-dark);">🌎 Ambos</button>
+      </div>
+    </div>
+
+    <!-- PANEL IA -->
+    <div id="panel-ia">
+      <!-- Zona de subida de imagen -->
+      <div id="ocr-drop-zone">
+        <i class="bi bi-image-fill"></i>
+        <h4>Arrastra, haz clic o pega tu captura aquí</h4>
+        <p>Formatos: JPG, PNG &nbsp;|&nbsp; Tip: <kbd>Ctrl+V</kbd> para pegar</p>
+        <input type="file" id="ocr-file" accept="image/*" style="display:none;" onchange="handleOcrFile(event)">
+      </div>
+      <div id="ocr-preview-area">
+        <img id="ocr-img" alt="Vista previa">
+        <div class="ocr-img-controls">
+          <button class="btn-action btn-dark-fill" id="btn-scan" onclick="runOCR()">
+            <i class="bi bi-magic"></i> Analizar con IA
+          </button>
+          <button class="btn-action btn-light" onclick="resetOcr()">
+            <i class="bi bi-arrow-clockwise"></i> Cambiar imagen
+          </button>
+        </div>
+      </div>
+      <div id="ocr-status-bar"></div>
+    </div>
+
+    <!-- PANEL TEXTO -->
+    <div id="panel-texto" style="display:none;">
+      <div style="background:#f8fafc; border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px;">
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
+          Pega los valores de inversión <strong>en orden cronológico</strong> (del día 1 al 30), uno por línea.<br>
+          El sistema los asignará automáticamente a cada fecha del país seleccionado.
+        </p>
+        <textarea id="text-inv-input" rows="10" placeholder="860.68&#10;679.37&#10;846.48&#10;572.76&#10;..." 
+          style="width:100%; padding:12px; border:1.5px solid var(--border); border-radius:8px; font-family:monospace; font-size:14px; resize:vertical; outline:none;"></textarea>
+        <button onclick="applyTextInvestment()" style="margin-top:12px; width:100%; padding:12px; background:var(--primary); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer;">
+          <i class="bi bi-arrow-right-circle-fill"></i> Mapear valores a fechas
+        </button>
+      </div>
+    </div>
+
+    <!-- Resultados (compartidos entre ambos paneles) -->
+    <div class="ocr-results-section" id="ocr-results">
+      <h4><i class="bi bi-check2-circle" style="color:var(--primary);"></i> Valores — Ajusta si es necesario:</h4>
+      <div class="inv-list" id="inv-list-container"></div>
+      <div class="inv-total-row" id="inv-total-row" style="margin-bottom:16px;">
+        <span>Total capturado:</span>
+        <span id="inv-total-val">$0.00</span>
+      </div>
+      <button class="btn-save-inv" onclick="saveInvestments()">
+        <i class="bi bi-check-lg"></i> Guardar Inversión y Actualizar Dashboard
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════
+let globalData   = [];       // Todos los datos parseados {Fecha, Pais, Link, Registros, Depositos, Inversion, Clicks}
+let activeCountry = 'SV';  // 'SV' | 'GT' | 'ALL'
+let ocrCountry   = 'SV';   // Country de la imagen OCR actual
+let manualInvestments = {}; // { 'SV::2026-02-01': 150, 'GT::2026-02-01': 200 }
+let linksSet = new Set();  // Set de links únicos para filtros
+let strategyHistory = [];    // Persistencia del chat [{role, text, time}]
+
+// ── Formatters ──
+const $ = id => document.getElementById(id);
+const fmtM   = n => typeof n === 'number' ? 'USD ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
+const fmtN   = n => typeof n === 'number' ? n.toLocaleString('es-MX') : '—';
+
+// ═══════════════════════════════════════════════════════
+// PERSISTENCIA
+// ═══════════════════════════════════════════════════════
+function saveToLocal() {
+  try {
+    const bundle = {
+      globalData,
+      manualInvestments,
+      strategyHistory,
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem('gp_dashboard_data', JSON.stringify(bundle));
+    console.log("💾 [PERFORMANCE] Datos sincronizados en LocalStorage");
+  } catch (e) {
+    console.error("❌ Error crítico al guardar en localStorage:", e);
+  }
+}
+
+function loadFromLocal() {
+  const raw = localStorage.getItem('gp_dashboard_data');
+  if (!raw) return false;
+  try {
+    const bundle = JSON.parse(raw);
+    if (!bundle) return false;
+    
+    globalData        = bundle.globalData || [];
+    manualInvestments = bundle.manualInvestments || {};
+    strategyHistory   = bundle.strategyHistory || [];
+    
+    // Reconstruir filtros
+    linksSet.clear();
+    globalData.forEach(d => { if(d.Link) linksSet.add(d.Link); });
+    
+    console.log("📂 [RESTORE] Datos recuperados con éxito");
+    return true;
+  } catch (e) {
+    console.error("❌ Fallo en la recuperación de datos locales:", e);
+    return false;
+  }
+}
+// AUTH & ROLES
+// ═══════════════════════════════════════════════════════
+function handleRoleUI() {
+  const role = sessionStorage.getItem('gp_role');
+  if (role === 'supervisor') {
+    document.body.classList.add('is-supervisor');
+  } else {
+    document.body.classList.remove('is-supervisor');
+  }
+  updateStrategyDisplay(); // <-- CRÍTICO: Muestra u oculta el chat estratégito
+}
+function renderStrategyHistory() {
+  const role = sessionStorage.getItem('gp_role');
+  const log = $('strategy-chat-log');
+  if (!log) return; // null-check crítico
+  log.innerHTML = '';
+  
+  if (strategyHistory.length === 0) {
+    log.innerHTML = `<div style="text-align:center; padding:40px; color:#92400e; font-style:italic; font-size:13px; opacity:0.6;">Sin historial de recomendaciones por ahora...</div>`;
+    return;
+  }
+
+  strategyHistory.forEach(msg => {
+    const isMe = msg.role === role;
+    const cls  = msg.role === 'supervisor' ? 'bubble-supervisor' : 'bubble-admin';
+    const label = msg.role === 'supervisor' ? 'Andrés (Supervisor)' : 'ANGEL ( Estratega )';
+    
+    log.innerHTML += `
+      <div class="chat-bubble ${cls}">
+        <span class="chat-role">${label}</span>
+        ${msg.text}
+        <span class="chat-time">${msg.time}</span>
+      </div>
+    `;
+  });
+  
+  // Scroll automatically to bottom
+  log.scrollTop = log.scrollHeight;
+}
+
+function sendMessageFromRole() {
+  const role = sessionStorage.getItem('gp_role');
+  const input = $('strategy-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  const now = new Date();
+  const time = now.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit' }) + ' ' + 
+               now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+               
+  // Añadir al historial local
+  strategyHistory.push({ role, text, time });
+  
+  // Limpiar y Guardar
+  input.value = "";
+  saveToLocal();
+  renderStrategyHistory();
+  console.log("📨 Mensaje enviado y guardado localmente desde:", role);
+}
+
+// Escuchar tecla Enter en el chat
+document.addEventListener('keydown', (e) => {
+  if (e.target.id === 'strategy-input' && e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessageFromRole();
+  }
+});
+
+function clearStrategyChat() {
+  if (confirm("¿Deseas archivar y borrar todo el historial?")) {
+    strategyHistory = [];
+    saveToLocal();
+    renderStrategyHistory();
+  }
+}
+
+function updateStrategyDisplay() {
+  const role = sessionStorage.getItem('gp_role');
+  const section = $('strategy-section');
+  if (!section) return;
+
+  section.style.display = 'flex';
+  
+  const labelBtn = $('label-send-btn');
+  if (labelBtn) labelBtn.textContent = role === 'admin' ? 'Responder' : 'Sugerir';
+  
+  const clearBtn = $('btn-clear-chat');
+  if (clearBtn) clearBtn.style.display = role === 'admin' ? 'block' : 'none';
+  
+  renderStrategyHistory();
+}
+
+function handleLogin() {
+  const u = $('login-user').value.trim().toLowerCase();
+  const p = $('login-pass').value.trim();
+  
+  if (u === 'admin' && p === 'admin') {
+    sessionStorage.setItem('gp_auth', 'true');
+    sessionStorage.setItem('gp_role', 'admin');
+    completeLogin();
+  } else if (u === 'andres' && p === 'andres') {
+    sessionStorage.setItem('gp_auth', 'true');
+    sessionStorage.setItem('gp_role', 'supervisor');
+    completeLogin();
+  } else {
+    $('login-error').style.display = 'block';
+  }
+}
+
+function completeLogin() {
+  handleRoleUI();
+  const hasData = loadFromLocal();
+  
+  $('login-screen').style.opacity = '0';
+  setTimeout(() => { 
+    $('login-screen').style.display = 'none'; 
+    $('app-container').style.display = 'flex';
+    updateStrategyHistoryLive(); // Sincronizar chat siempre
+    if (hasData) {
+      updateFilterUI();
+      renderDashboard();
+    }
+  }, 500);
+}
+
+function handleLogout() { 
+  sessionStorage.clear(); // Limpieza total de sesión
+  location.reload(); 
+}
+
+// ═══════════════════════════════════════════════════════
+// INICIALIZACIÓN
+// ═══════════════════════════════════════════════════════
+function initApp() {
+  handleRoleUI();
+  if (sessionStorage.getItem('gp_auth') === 'true') {
+    loadFromLocal();
+    $('login-screen').style.display = 'none';
+    $('app-container').style.display = 'flex';
+    updateFilterUI();
+    updateStrategyHistoryLive(); 
+    renderDashboard();
+  }
+}
+
+// Sincronización en vivo entre pestañas/sesiones
+function updateStrategyHistoryLive() {
+  renderStrategyHistory();
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'gp_dashboard_data') {
+      console.log("♻️ Actualizando chat por cambio externo");
+      loadFromLocal();
+      renderStrategyHistory();
+    }
+  });
+}
+
+// Ejecutar al cargar
+initApp();
+
+// ═══════════════════════════════════════════════════════
+// COUNTRY SWITCHER
+// ═══════════════════════════════════════════════════════
+function switchCountry(code) {
+  activeCountry = code;
+  $('btn-sv').className  = 'country-btn' + (code === 'SV'  ? ' active-sv' : '');
+  $('btn-gt').className  = 'country-btn' + (code === 'GT'  ? ' active-gt' : '');
+  $('btn-all').className = 'country-btn' + (code === 'ALL' ? ' active-sv' : '');  // neutral style for "both"
+  if (code === 'ALL') $('btn-all').style.background = '#475569';
+  
+  const pill = $('kpi-country-pill');
+  if (code === 'SV')  { pill.textContent = 'El Salvador'; pill.className = 'country-pill pill-sv'; }
+  if (code === 'GT')  { pill.textContent = 'Guatemala';   pill.className = 'country-pill pill-gt'; }
+  if (code === 'ALL') { pill.textContent = 'Todos los países'; pill.className = 'country-pill'; pill.style.background='rgba(0,0,0,0.06)'; pill.style.color='var(--text-muted)'; }
+  
+  renderDashboard();
+}
+
+// ═══════════════════════════════════════════════════════
+// PARSEO DEL EXCEL ─ MULTI PAÍS INTELIGENTE
+// ═══════════════════════════════════════════════════════
+
+// Adjuntar listener de forma directa y robusta
+document.addEventListener('DOMContentLoaded', () => {
+  const fileInput = document.getElementById('file-input');
+  const uploadArea = document.getElementById('upload-area');
+
+  if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      console.log('📂 Archivo seleccionado:', file.name, file.size, 'bytes');
+      document.getElementById('topbar-sub').textContent = '⏳ Leyendo archivo: ' + file.name;
+      
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        try {
+          const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array', cellDates: true });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
+          console.log('✅ Excel leído. Filas:', matrix.length);
+          parseMatrix(matrix);
+        } catch(err) {
+          console.error('❌ Error leyendo Excel:', err);
+          alert('❌ No se pudo leer el archivo Excel.\n\nAsegúrate de que sea un archivo .xlsx válido.');
+          document.getElementById('topbar-sub').textContent = 'Error leyendo el archivo.';
+        }
+        e.target.value = ''; // Permitir re-subir el mismo archivo
+      };
+      reader.onerror = function() {
+        alert('❌ Error leyendo el archivo. Inténtalo de nuevo.');
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+});
+
+function handleFileUpload(e) {
+  // Mantener compatibilidad con llamadas directas (por si acaso)
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
+      parseMatrix(matrix);
+    } catch(err) {
+      alert('❌ Error leyendo el archivo Excel.');
+    }
+    e.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showDebugPanel(matrix) {
+  const old = document.getElementById('debug-panel');
+  if (old) old.remove();
+  let html = `<div id="debug-panel" style="position:fixed;top:10px;right:10px;z-index:99999;background:#0f172a;color:#00d4aa;border:2px solid #00d4aa;padding:16px;border-radius:12px;max-width:96vw;max-height:75vh;overflow:auto;font-family:monospace;font-size:10.5px;line-height:1.6;box-shadow:0 8px 32px rgba(0,0,0,.7);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <b style="font-size:13px;">🔍 RAW EXCEL — ${matrix.length} filas</b>
+      <div style="display:flex; gap:8px;">
+        <button onclick="document.getElementById('debug-panel').remove()" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:12px;font-weight:700;">Ignorar</button>
+        <button onclick="document.getElementById('debug-panel').remove()" style="background:#10b981;color:#fff;border:none;border-radius:6px;padding:4px 14px;cursor:pointer;font-size:12px;font-weight:700;">✅ Procesar y Salir</button>
+      </div>
+    </div>`;
+  for (let r = 0; r < Math.min(14, matrix.length); r++) {
+    const row = matrix[r];
+    const cells = row.slice(0, 12).map((c, i) => {
+      let v = c;
+      if (c instanceof Date) v = `📅${c.getUTCFullYear()}-${String(c.getUTCMonth()+1).padStart(2,'0')}-${String(c.getUTCDate()).padStart(2,'0')}`;
+      else if (c === '') v = '·';
+      const col = i===0?'#fbbf24':i<=4?'#38bdf8':'#94a3b8';
+      return `<span style="color:${col};margin-right:6px">[${i}]:${String(v).substring(0,18)}</span>`;
+    }).join('');
+    html += `<div style="padding:2px 4px;${r%2?'':'background:rgba(255,255,255,0.04)'}"><b style="color:#475569">R${r}:</b> ${cells}</div>`;
+  }
+  html += `</div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// ── Corrección automática de fechas invertidas (DD/MM vs MM/DD) ──────────────
+let _dateSwap = false;
+
+// avg() DEBE estar en scope global antes de autoDetectDateSwap
+function avg(a) {
+  const s = [...a].sort((x, y) => x - y);
+  let t = 0, n = 0;
+  for (let i = 1; i < s.length; i++) {
+    const d = (s[i] - s[i-1]) / 86400000;
+    if (d > 0) { t += d; n++; }
+  }
+  return n ? t / n : Infinity;
+}
+
+function autoDetectDateSwap(matrix, headerRow, colFecha) {
+  const oMs=[], sMs=[];
+  for (let r=headerRow+1; r<Math.min(headerRow+20,matrix.length); r++) {
+    const raw=matrix[r][colFecha];
+    if (!(raw instanceof Date)||isNaN(raw.getTime())) continue;
+    const mo=raw.getUTCMonth()+1, da=raw.getUTCDate(), yr=raw.getUTCFullYear();
+    oMs.push(Date.UTC(yr,mo-1,da));
+    if (da<=12) sMs.push(Date.UTC(yr,da-1,mo));
+  }
+  if (oMs.length<2) { _dateSwap=false; return; }
+  
+  const dO=avg(oMs), dS=sMs.length>=2?avg(sMs):Infinity;
+  
+  // Si los saltos en el formato original son muy grandes (ej. 28-31 días)
+  // eso indica que el sistema cree que está cambiando de mes, pero es el día el que cambia.
+  _dateSwap = (dS < dO && dO > 15); 
+  
+  const badge = document.getElementById('dateswap-badge');
+  const btnManual = document.getElementById('btn-manual-swap');
+  
+  if (_dateSwap) {
+    badge.style.display = 'inline-block';
+    badge.textContent = '⚠️ Corrección de Fecha Activa';
+  } else {
+    badge.style.display = 'none';
+  }
+  // Mostrar botón manual si hay datos
+  if (matrix.length > 5) btnManual.style.display = 'block';
+}
+
+function normalizeDate(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  
+  let yr, mo, da;
+
+  if (raw instanceof Date && !isNaN(raw.getTime())) {
+    yr = raw.getUTCFullYear();
+    mo = raw.getUTCMonth() + 1;
+    da = raw.getUTCDate();
+  } else {
+    const s = String(raw).trim();
+    if (!s) return null;
+    const mx = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (mx) {
+      yr = mx[3]; if(yr.length===2) yr='20'+yr;
+      mo = parseInt(mx[2]);
+      da = parseInt(mx[1]);
+    } else {
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return null;
+      yr = d.getFullYear();
+      mo = d.getMonth() + 1;
+      da = d.getDate();
+    }
+  }
+
+  // 🛡️ Aplicar SWAP si el sensor está activo
+  if (_dateSwap && da <= 12) {
+    const t = mo; mo = da; da = t;
+  }
+
+  return `${yr}-${String(mo).padStart(2,'0')}-${String(da).padStart(2,'0')}`;
+}
+
+function parseMatrix(matrix) {
+  globalData = [];
+  linksSet.clear();
+  const dataMap = new Map();
+  document.getElementById('topbar-sub').textContent = '⏳ Procesando archivo de gran tamaño...';
+
+  if (!matrix || matrix.length < 2) {
+    alert('⚠️ El Excel parece estar vacío.');
+    return;
+  }
+
+  // 1. Detección Inteligente de Cabeceras
+  let headerRow = -1;
+  let colFecha = -1, colPais = -1, colLink = -1, colRegs = -1, colFtd = -1, colClicks = -1;
+
+  for (let r = 0; r < Math.min(30, matrix.length); r++) {
+    const row = matrix[r];
+    if (!row || row.length < 3) continue;
+    
+    let fPer = -1, fReg = -1;
+    for (let c = 0; c < row.length; c++) {
+      const v = String(row[c] || '').toUpperCase().trim();
+      if (['FECHA','PERIODO','DATE','FRANJA','DIA'].some(k => v.includes(k))) fPer = c;
+      if (['REGISTROS','REGISTRO','REGS','REG','REGISTRADOS'].some(k => v.includes(k))) fReg = c;
+    }
+
+    if (fPer !== -1 && fReg !== -1) {
+      headerRow = r;
+      colFecha  = fPer;
+      colRegs   = fReg;
+      for (let c = 0; c < row.length; c++) {
+        const v = String(row[c] || '').toUpperCase().trim();
+        if (v.includes('PAIS') || v.includes('PAÍS')) colPais = c;
+        if (v.includes('LINK') || v.includes('CAMPAÑA') || v.includes('NOMBRE_')) colLink = c;
+        if (v.includes('CLICK') || v.includes('CLIC')) colClicks = c;
+      }
+      
+      // FTD: detección en dos pasadas para garantizar CANTIDAD sobre VALOR
+      // Pasada 1: buscar columna que diga explícitamente CANTIDAD + PRIMEROS (máxima prioridad)
+      let colFtdCantidad = -1, colFtdGenerico = -1;
+      for (let c = 0; c < row.length; c++) {
+        const v = String(row[c] || '').toUpperCase().trim();
+        if (v.includes('CANTIDAD') && (v.includes('PRIMERO') || v.includes('DEPOSITO') || v.includes('DEPÓSITO'))) {
+          colFtdCantidad = c;
+        } else if (v === 'FTD' || v === 'FTDS') {
+          colFtdCantidad = c; // etiqueta explícita FTD también es prioridad
+        } else if ((v.includes('PRIMERO') || v.includes('DEPOSITO') || v.includes('DEPÓSITO')) 
+                   && !v.includes('VALOR') && !v.includes('MONTO') && !v.includes('USD')) {
+          colFtdGenerico = c;
+        }
+      }
+      colFtd = colFtdCantidad !== -1 ? colFtdCantidad : colFtdGenerico;
+      console.log(`🎯 Columnas detectadas → Fecha[${colFecha}] País[${colPais}] Link[${colLink}] Regs[${colRegs}] FTD[${colFtd}] Clicks[${colClicks}]`);
+      console.log(`   FTD: Columna CANTIDAD=${colFtdCantidad}, Genérico=${colFtdGenerico} → Usando [${colFtd}]: "${row[colFtd]}"`);
+      break; 
+    }
+  }
+
+  if (headerRow === -1) {
+    alert('❌ ERROR: No encontré la fila de títulos (Fecha/Registros).\n\nRevisa que el Excel no tenga filas vacías al inicio.');
+    document.getElementById('topbar-sub').textContent = 'Error en la carga.';
+    return;
+  }
+
+  autoDetectDateSwap(matrix, headerRow, colFecha);
+
+  // ── 4. Extraer datos fila por fila ──
+
+  for (let r = headerRow + 1; r < matrix.length; r++) {
+    try {
+      const row = matrix[r];
+      if (!row || row.length < 2) continue;
+
+      const fechaRaw = row[colFecha];
+      if (!fechaRaw) continue;
+      const fecha = normalizeDate(fechaRaw);
+      if (!fecha) continue;
+
+      const paisRaw = String(row[colPais] || '').toUpperCase().trim();
+      let pais = 'SV';
+      if (paisRaw.includes('GUATEMAL') || paisRaw === 'GT') pais = 'GT';
+      else if (paisRaw.includes('SALVADOR') || paisRaw === 'SV') pais = 'SV';
+
+      const link = String(row[colLink] || 'Sin Campaña').trim();
+      const regs = parseFloat(String(row[colRegs] || 0).replace(/[^0-9.-]/g, '')) || 0;
+      const ftds = parseFloat(String(row[colFtd] || 0).replace(/[^0-9.-]/g, '')) || 0;
+      const clicks = colClicks >= 0 ? (parseFloat(String(row[colClicks] || 0).replace(/[^0-9.-]/g, '')) || 0) : 0;
+
+      const key = `${fecha}::${pais}::${link}`;
+      if (!dataMap.has(key)) {
+        dataMap.set(key, { Fecha: fecha, Pais: pais, Link: link, Registros: 0, Depositos: 0, Inversion: 0, Clicks: 0 });
+      }
+      const rec = dataMap.get(key);
+      rec.Registros += regs;
+      rec.Depositos += ftds;
+      rec.Clicks += clicks;
+      linksSet.add(link);
+    } catch (err) {
+      console.warn(`⚠️ Error en fila ${r}, saltando...`, err);
+    }
+  }
+
+  globalData = Array.from(dataMap.values());
+  globalData.sort((a,b) => a.Fecha.localeCompare(b.Fecha));
+
+  saveToLocal(); 
+  updateFilterUI();
+  renderDashboard();
+  
+  if (globalData.length > 0) {
+    alert(`📊 ✅ CARGA EXITOSA\n\nSe han procesado ${globalData.length} registros del archivo Excel correctamente.`);
+  }
+}
+
+function updateFilterUI() {
+  const sel = $('filter-link');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Todas las campañas</option>';
+  const sorted = Array.from(linksSet).sort();
+  sorted.forEach(l => sel.innerHTML += `<option value="${l}">${l}</option>`);
+
+  const countries = [...new Set(globalData.map(d => d.Pais))]
+    .map(p => p === 'SV' ? '🇸🇻 El Salvador' : '🇬🇹 Guatemala').join(' + ');
+  $('topbar-sub').textContent = `${globalData.length} registros cargados · ${countries}`;
+
+  const ua = $('upload-area');
+  if (ua) {
+    ua.style.padding = '14px 24px';
+    const icon = ua.querySelector('.upload-icon');
+    if (icon) icon.style.display = 'none';
+    const h3 = ua.querySelector('h3');
+    if (h3) h3.textContent = `✅ ${globalData.length} filas cargadas — Haz clic para cambiar archivo`;
+    const p = ua.querySelector('p');
+    if (p) p.style.display = 'none';
+    const btn = ua.querySelector('.btn-upload');
+    if (btn) btn.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER DASHBOARD
+// ═══════════════════════════════════════════════════════
+function clearFilters() {
+  $('filter-start').value = '';
+  $('filter-end').value = '';
+  $('filter-link').value = '';
+  renderDashboard();
+}
+
+function resetSystemData() {
+  if (confirm("🚨 ¡ADVERTENCIA CRÍTICA!\n\nSe borrarán TODOS los datos cargados: Excel, Inversiones de la IA e Historial de Chat con Andrés.\n\nEsta acción NO se puede deshacer. ¿Deseas continuar?")) {
+    localStorage.removeItem('gp_dashboard_data');
+    globalData = [];
+    manualInvestments = {};
+    strategyHistory = [];
+    alert("✅ Sistema restablecido con éxito.");
+    location.reload(); // Recargar para limpiar UI
+  }
+}
+
+function toggleDateSwap() {
+  _dateSwap = !_dateSwap;
+  console.log("🔄 Swap manual ejecutado. Nuevo estado:", _dateSwap);
+  // Re-procesar los datos si hay un Excel cargado
+  // Nota: Esto funciona mejor si se vuelve a procesar la matriz, 
+  // pero para cambios rápidos, podemos intentar swappear el globalData directamente.
+  globalData.forEach(row => {
+    const p = row.Fecha.split('-'); // YYYY-MM-DD
+    row.Fecha = `${p[0]}-${p[2]}-${p[1]}`;
+  });
+  globalData.sort((a,b) => a.Fecha.localeCompare(b.Fecha));
+  renderDashboard();
+  
+  const badge = document.getElementById('dateswap-badge');
+  badge.style.display = _dateSwap ? 'inline-block' : 'none';
+  badge.textContent = '⚠️ Corrección Manual Activa';
+}
+
+function renderDashboard() {
+  if (!globalData || globalData.length === 0) return;
+  const startDate = $('filter-start').value; // YYYY-MM-DD
+  const endDate   = $('filter-end').value;   // YYYY-MM-DD
+  const selLink   = $('filter-link').value;
+
+  // Filtrar datos
+  let filtered = globalData.filter(d => {
+    // 1. Filtro de País (Andrés puede ver ambos)
+    if (activeCountry !== 'ALL' && d.Pais !== activeCountry) return false;
+    
+    // 2. Filtro de Link/Campaña
+    if (selLink && d.Link !== selLink) return false;
+    
+    // 3. Filtro de Flechas (Comparación de strings YYYY-MM-DD es segura y directa)
+    if (startDate && d.Fecha < startDate) return false;
+    if (endDate && d.Fecha > endDate)     return false;
+    
+    return true;
+  });
+
+  // Ordenar cronológicamente (más antiguo primero)
+  filtered.sort((a,b) => a.Fecha.localeCompare(b.Fecha));
+
+  let totalClicks = 0, totalReg = 0, totalFtd = 0, totalInv = 0;
+  const tbody = $('table-body');
+  if (tbody) {
+    tbody.innerHTML = '';
+    filtered.forEach(row => {
+      totalClicks += row.Clicks || 0;
+      totalReg    += row.Registros || 0;
+      totalFtd    += row.Depositos || 0;
+      totalInv    += row.Inversion || 0;
+      const cpl = row.Registros > 0 ? row.Inversion / row.Registros : 0;
+      const cpa = row.Depositos > 0 ? row.Inversion / row.Depositos : 0;
+      const tagCls = row.Pais === 'SV' ? 'tag-sv' : 'tag-gt';
+      const flag    = row.Pais === 'SV' ? '🇸🇻' : '🇬🇹';
+      const label   = row.Pais === 'SV' ? 'El Salvador' : 'Guatemala';
+
+      tbody.innerHTML += `
+        <tr>
+          <td style="font-size:12px; font-weight:700;">${row.Fecha.split('-').reverse().join('/')}</td>
+          <td><span class="country-tag ${tagCls}">${flag} ${label}</span></td>
+          <td class="col-link" style="font-size:12px;">${row.Link}</td>
+          <td class="col-clicks">${fmtN(row.Clicks)}</td>
+          <td>${fmtN(row.Registros)}</td>
+          <td style="font-weight:700; color:var(--primary-dark);">${fmtN(row.Depositos)}</td>
+          <td>${row.Inversion > 0 ? fmtM(row.Inversion) : '<span style="color:var(--text-muted);font-size:11px;">Sin dato</span>'}</td>
+          <td style="font-weight:600;">${cpl > 0 ? fmtM(cpl) : '—'}</td>
+          <td style="font-weight:600;">${cpa > 0 ? fmtM(cpa) : '—'}</td>
+        </tr>`;
+    });
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:32px;">No hay datos con los filtros seleccionados</td></tr>`;
+  }
+
+  const globalCPL = totalReg  > 0 ? totalInv / totalReg  : 0;
+  const globalCPA = totalFtd  > 0 ? totalInv / totalFtd  : 0;
+
+  $('val-clicks').textContent    = fmtN(totalClicks);
+  $('val-registros').textContent = fmtN(totalReg);
+  $('val-depositos').textContent = fmtN(totalFtd);
+  $('val-inversion').textContent = totalInv > 0 ? fmtM(totalInv) : '—';
+  $('val-cpl').textContent       = globalCPL > 0 ? fmtM(globalCPL) : '—';
+  $('val-cpa').textContent       = globalCPA > 0 ? fmtM(globalCPA) : '—';
+  $('inv-status').textContent    = totalInv > 0 ? `${filtered.filter(d=>d.Inversion>0).length} días con dato` : 'Usa "Cargar Inversión" para añadir';
+}
+
+// ═══════════════════════════════════════════════════════
+// MODAL OCR — INVERSIÓN CON IA
+// ═══════════════════════════════════════════════════════
+function openInvModal() {
+  if (globalData.length === 0) { alert('Primero sube el Excel con tus registros.'); return; }
+  $('modal-inv').style.display = 'flex';
+  resetOcr();
+}
+function closeInvModal() { $('modal-inv').style.display = 'none'; }
+
+function switchInvTab(tab) {
+  const isIA = tab === 'ia';
+  $('panel-ia').style.display    = isIA ? 'block' : 'none';
+  $('panel-texto').style.display = isIA ? 'none'  : 'block';
+  $('ocr-results').style.display = 'none'; // Resetear resultados al cambiar pestaña
+
+  // Estilos activo/inactivo
+  $('tab-ia').style.background    = isIA ? 'var(--primary)' : '#fff';
+  $('tab-ia').style.color         = isIA ? '#fff' : 'var(--text-muted)';
+  $('tab-ia').style.borderColor   = isIA ? 'var(--primary)' : 'var(--border)';
+  $('tab-texto').style.background = isIA ? '#fff' : 'var(--primary)';
+  $('tab-texto').style.color      = isIA ? 'var(--text-muted)' : '#fff';
+  $('tab-texto').style.borderColor= isIA ? 'var(--border)' : 'var(--primary)';
+}
+
+function applyTextInvestment() {
+  const raw = $('text-inv-input').value.trim();
+  if (!raw) { alert('⚠️ Escribe al menos un valor de inversión.'); return; }
+
+  // Parsear líneas → valores numéricos
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const values = lines.map(l => {
+    // Soportar punto o coma como decimal: 860.68 o 860,68
+    const clean = l.replace(/[^0-9.,]/g, '').replace(',', '.');
+    return parseFloat(clean) || 0;
+  });
+
+  if (values.length === 0) { alert('⚠️ No se encontraron valores válidos.'); return; }
+
+  // Obtener fechas únicas del país seleccionado, en orden cronológico
+  let dates;
+  if (ocrCountry === 'BOTH') {
+    dates = [...new Set(globalData.map(d => d.Fecha))].sort();
+  } else {
+    dates = [...new Set(globalData.filter(d => d.Pais === ocrCountry).map(d => d.Fecha))].sort();
+  }
+
+  if (dates.length === 0) {
+    alert('⚠️ No hay fechas cargadas para el país seleccionado.\nSube primero tu Excel.');
+    return;
+  }
+
+  // Mapear: valor[i] → fecha[i]
+  const ocrPairs = [];
+  const used = Math.min(values.length, dates.length);
+  for (let i = 0; i < used; i++) {
+    ocrPairs.push({ date: dates[i], sv: values[i], gt: values[i] });
+  }
+
+  const skipped = values.length - used;
+  let msg = `✅ Mapeados ${used} valores a ${used} fechas.`;
+  if (skipped > 0) msg += `\n⚠️ ${skipped} valores extras fueron ignorados (más valores que fechas).`;
+  if (dates.length > values.length) msg += `\n⚠️ Faltan ${dates.length - values.length} valores (quedarán en $0).`;
+
+  // Mostrar resultados editables
+  showOcrResults(ocrPairs);
+  $('ocr-status-bar').textContent = msg;
+  alert(msg);
+}
+
+
+function setOcrCountry(code) {
+  ocrCountry = code;
+  ['SV','GT','BOTH'].forEach(c => {
+    const btn = $(`ocr-tab-${c.toLowerCase()}`);
+    btn.className = 'ocr-tab' + (c === code ? (c === 'SV' ? ' active-sv' : c === 'GT' ? ' active-gt' : '') : '');
+    if (c === code && c === 'BOTH') { btn.style.background = 'var(--primary)'; btn.style.color='white'; btn.style.borderColor='var(--primary)'; }
+    else if (c !== code) { btn.style.background=''; btn.style.color=''; btn.style.borderColor=''; }
+  });
+}
+
+function resetOcr() {
+  $('ocr-drop-zone').style.display = 'block';
+  $('ocr-preview-area').style.display = 'none';
+  $('ocr-results').style.display = 'none';
+  $('ocr-status-bar').textContent = '';
+  $('ocr-img').src = '';
+  $('ocr-file').value = '';
+}
+
+// Click en zona de drop → abrir selector
+$('ocr-drop-zone').addEventListener('click', () => $('ocr-file').click());
+
+// Drag & drop
+$('ocr-drop-zone').addEventListener('dragover', e => { e.preventDefault(); $('ocr-drop-zone').classList.add('drag-over'); });
+$('ocr-drop-zone').addEventListener('dragleave', () => $('ocr-drop-zone').classList.remove('drag-over'));
+$('ocr-drop-zone').addEventListener('drop', e => {
+  e.preventDefault(); $('ocr-drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadOcrImage(file);
+});
+
+// Ctrl+V en cualquier lugar mientras el modal esté abierto
+document.addEventListener('paste', e => {
+  if ($('modal-inv').style.display !== 'flex') return;
+  const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+  for (const item of items) {
+    if (item.kind === 'file' && item.type.startsWith('image/')) {
+      loadOcrImage(item.getAsFile()); break;
+    }
+  }
+});
+
+function handleOcrFile(e) { if (e.target.files[0]) loadOcrImage(e.target.files[0]); }
+
+function loadOcrImage(file) {
+  const url = URL.createObjectURL(file);
+  $('ocr-img').src = url;
+  $('ocr-drop-zone').style.display = 'none';
+  $('ocr-preview-area').style.display = 'block';
+  $('ocr-results').style.display = 'none';
+  $('ocr-status-bar').textContent = 'Imagen cargada. Pulsa "Analizar con IA" para extraer los valores.';
+}
+
+// ── OCR CORE ──
+async function runOCR() {
+  const btn    = $('btn-scan');
+  const status = $('ocr-status-bar');
+  const imgSrc = $('ocr-img').src;
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analizando...';
+  status.textContent = 'Cargando motor de visión IA...';
+  status.style.color = 'var(--primary-dark)';
+
+  try {
+    const { data: { text } } = await Tesseract.recognize(imgSrc, 'spa+eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          status.textContent = `Escaneando imagen... ${Math.round(m.progress * 100)}%`;
+        }
+      }
+    });
+
+    status.textContent = '✅ Análisis completado. Buscando columna "Inversión"...';
+    btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Re-analizar';
+    btn.disabled = false;
+
+    const extracted = extractInversionFromOcrText(text);
+    showOcrResults(extracted);
+
+  } catch (err) {
+    console.error(err);
+    status.textContent = '❌ Error al analizar la imagen. Intenta con una captura más clara.';
+    status.style.color = 'var(--danger)';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Reintentar';
+  }
+}
+
+/**
+ * OCR: extrae pares {date, amount} del texto escaneado.
+ * 1. Busca la cabecera "Inversión" para identificar qué columna tomar.
+ * 2. Para cada fila con fecha (dd/mm/yyyy), extrae el importe correspondiente.
+ * 3. Devuelve [{date: 'YYYY-MM-DD', amount: 808.98}, ...]
+ */
+/**
+ * OCR: extrae pares {date, sv, gt} del texto escaneado.
+ * Distingue registros vs inversión enfocándose en números con decimales (ej. 860.68).
+ */
+function extractInversionFromOcrText(rawText) {
+  console.log('📝 OCR texto origin:\n', rawText);
+  const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const ocrData = [];
+
+  for (const line of lines) {
+    // 1. Detectar Fecha (DD/MM/YYYY)
+    const dateMatch = line.match(/(\d{1,2})\s*[\/\-\.]\s*(\d{1,2})\s*[\/\-\.]\s*(\d{2,4})/);
+    if (!dateMatch) continue;
+
+    const dd = dateMatch[1].padStart(2, '0');
+    const mn = dateMatch[2].padStart(2, '0');
+    let year = dateMatch[3];
+    if (year.length === 2) year = '20' + year;
+    const dateNorm = `${year}-${mn}-${dd}`; // YYYY-MM-DD
+
+    // 2. Detectar Montos (números decimales con punto o coma)
+    const moneyRegex = /[\d]{1,3}(?:[,.\s\u00a0][\d]{3})*(?:[.,\s][\d]{2})/g;
+    const matches = line.match(moneyRegex);
+    
+    if (matches && matches.length >= 1) {
+      const vals = matches.map(m => normalizeMoney(m.replace(/\s/g,'.'))).filter(v => v > 0);
+      if (vals.length > 0) {
+        ocrData.push({
+          date: dateNorm,
+          sv: vals[0] || 0,
+          gt: vals[1] || 0
+        });
+        console.log(`✅ IA: ${dateNorm} -> SV: $${vals[0] || 0}, GT: $${vals[1] || 0}`);
+      }
+    }
+  }
+
+  // Eliminar duplicados y limpiar totales
+  const finalMap = new Map();
+  ocrData.forEach(r => finalMap.set(r.date, r));
+  const resultsArr = Array.from(finalMap.values());
+
+  const finalResults = filterOcrResults(resultsArr);
+  console.log(`📊 IA: ${finalResults.length} días consolidados.`);
+  return finalResults;
+}
+
+function filterOcrResults(arr) {
+  if (arr.length < 2) return arr;
+  // Si encontramos una fila que es la suma exacta de las anteriores, la descartamos
+  const last = arr[arr.length - 1];
+  const others = arr.slice(0, -1);
+  const sumSV = others.reduce((s, r) => s + r.sv, 0);
+  if (Math.abs(sumSV - last.sv) < 0.1) {
+    console.log("🗑️ Fila 'TOTAL' detectada por suma y eliminada.");
+    return others;
+  }
+  return arr;
+}
+
+function normalizeMoney(str) {
+  if (!str) return 0;
+  // Eliminar todo menos números, puntos y comas
+  let clean = str.replace(/[^\d.,]/g, '');
+  // Manejar formato europeo (comas por puntos)
+  if (clean.includes(',') && clean.includes('.')) {
+    if (clean.indexOf(',') > clean.indexOf('.')) clean = clean.replace(/\./g, '').replace(',', '.');
+    else clean = clean.replace(/,/g, '');
+  } else if (clean.includes(',')) {
+    clean = clean.replace(',', '.');
+  }
+  return parseFloat(clean) || 0;
+}
+
+/**
+ * Renderiza los resultados del OCR.
+ * Si el usuario eligió "Ambos", renderiza 2 inputs (SV y GT) por día.
+ */
+function showOcrResults(ocrPairs) {
+  $('ocr-results').style.display = 'block';
+  const container = $('inv-list-container');
+  container.innerHTML = '';
+
+  let dates;
+  if (ocrCountry === 'BOTH') {
+    dates = [...new Set(globalData.map(d => d.Fecha))].sort();
+  } else {
+    dates = [...new Set(globalData.filter(d => d.Pais === ocrCountry).map(d => d.Fecha))].sort();
+  }
+
+  if (dates.length === 0) {
+    container.innerHTML = `<p style="color:var(--danger);text-align:center;">No hay fechas disponibles para el país seleccionado en el Excel cargado.</p>`;
+    return;
+  }
+
+  const ocrMap = new Map();
+  for (const p of ocrPairs) {
+    ocrMap.set(p.date, p);
+  }
+
+  let total = 0;
+  let matchCount = 0;
+
+  dates.forEach(date => {
+    // Coincidencia exacta (ambas fuentes ahora producen YYYY-MM-DD con día/mes correctos)
+    const ocrMatch = ocrMap.get(date);
+
+    if (ocrMatch) matchCount++;
+
+    const countriesToRender = ocrCountry === 'BOTH' ? ['SV', 'GT'] : [ocrCountry];
+
+    // Mostrar como DD/MM/YYYY en la UI
+    let displayDate = date;
+    const parts = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (parts) displayDate = `${parts[3]}/${parts[2]}/${parts[1]}`;
+
+    countriesToRender.forEach(pais => {
+      let ocrVal = 0;
+      if (ocrMatch) {
+         if (ocrCountry === 'BOTH') {
+            ocrVal = pais === 'SV' ? ocrMatch.sv : ocrMatch.gt;
+         } else if (ocrCountry === 'SV') {
+            ocrVal = ocrMatch.sv; 
+         } else if (ocrCountry === 'GT') {
+            ocrVal = ocrMatch.gt; 
+         }
+      }
+
+      const key = `${pais}::${date}`;
+      const existing = manualInvestments[key] || 0;
+      const finalVal = ocrVal > 0 ? ocrVal : existing;
+      total += finalVal;
+
+      const flag = pais === 'SV' ? '🇸🇻 SV' : '🇬🇹 GT';
+      const pillClass = pais === 'SV' ? 'pill-sv' : 'pill-gt';
+
+      container.innerHTML += `
+        <div class="inv-item" style="${ocrCountry==='BOTH' ? 'margin-bottom:6px; background:var(--card-bg);' : ''}">
+          <div>
+            <div class="inv-item-date">${displayDate} <span class="country-pill ${pillClass}" style="margin-left:6px; font-size:10px;">${flag}</span></div>
+            <small style="color:${ocrVal > 0 ? 'var(--primary-dark)' : 'var(--text-muted)'};">
+               ${ocrVal > 0 ? `✔️ IA detectó: $${ocrVal.toFixed(2)}` : 'Sin dato OCR — ingresa manualmente'}
+            </small>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="color:var(--primary-dark);font-weight:700;font-size:12px;">USD</span>
+            <input type="number" class="inv-item-input" data-date="${date}" data-pais="${pais}" placeholder="0.00"
+              value="${finalVal > 0 ? finalVal.toFixed(2) : ''}" min="0" step="0.01" oninput="updateTotal()">
+          </div>
+        </div>`;
+    });
+  });
+
+  $('inv-total-val').textContent = fmtM(total);
+  $('ocr-status-bar').textContent = `✅ ${matchCount} de ${dates.length} días de Excel tienen coincidencia con la imagen OCR.`;
+}
+
+function updateTotal() {
+  let t = 0;
+  document.querySelectorAll('.inv-item-input').forEach(inp => t += parseFloat(inp.value) || 0);
+  $('inv-total-val').textContent = fmtM(t);
+}
+
+function saveInvestments() {
+  const inputs = document.querySelectorAll('.inv-item-input');
+
+  inputs.forEach(inp => {
+    const date = inp.getAttribute('data-date');
+    const pais = inp.getAttribute('data-pais');
+    const val  = parseFloat(inp.value) || 0;
+
+    const key = `${pais}::${date}`;
+    manualInvestments[key] = val;
+  });
+
+  // Distribuir inversión en globalData
+  const uniquePaisDates = [...new Set(Object.keys(manualInvestments))];
+  uniquePaisDates.forEach(key => {
+    const [pais, date] = key.split('::');
+    const spend = manualInvestments[key] || 0;
+    const rows  = globalData.filter(d => d.Pais === pais && d.Fecha === date);
+    
+    const totalRegs = rows.reduce((s, r) => s + r.Registros, 0);
+    rows.forEach(r => {
+      // Repartimos proporcional a los registros si los hay
+      if (totalRegs > 0) {
+         r.Inversion = spend * (r.Registros / totalRegs);
+      } else { // Si no hay registros, reparto equitativo
+         r.Inversion = spend / Math.max(rows.length, 1);
+      }
+    });
+  });
+
+  saveToLocal(); // PERSISTENCIA TOTAL
+  closeInvModal();
+  renderDashboard();
+  alert(`✅ Inversiones guardadas y sincronizadas.`);
+}
+</script>
+</body>
+</html>
